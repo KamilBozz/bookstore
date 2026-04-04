@@ -3,16 +3,45 @@
 @using Microsoft.EntityFrameworkCore
 @* @using Bookstore.Data *@
 @inject IDbContextFactory<BookstoreDb> DbFactory
+@rendermode InteractiveServer
 
 <PageTitle>Bookstore - Home</PageTitle>
 
 <div class="row mt-5 mx-auto">
+    <div class="col-sm-2 border pt-3 me-3 mb-3">
+        <a href="/books/create" class="btn btn-primary">New Book</a>
+        <div class="mt-3">
+            <h6>Filter by:</h6>
+            <select class="form-control" @bind="genreFilter">
+                <option value="">Genre</option>
+                @if(genres != null) {
+                    @foreach(var genre in genres) {
+                        <option value="@genre">@genre</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="mt-3">
+            <h6>Sort by:</h6>
+            <select class="form-control" @bind="sortFilter">
+                <option value="">Price</option>
+                @if(genres != null) {
+                    @* @foreach(var price in prices) {
+                        <option value="@price">@price</option>
+                    } *@
+                        <option value="asc">Low Price</option>
+                        <option value="desc">High Price</option>
+                }
+            </select>
+        </div>
+    </div>
+
     <div class="col">
         @if (books is null) {
             <p>Loading...</p>
         } else {
             <div class="hstack flex-wrap gap-3">
-                @foreach(var book in books) {
+                @foreach(var book in sorted) {
                     <BookCard Book="@book" />
                 }
             </div>
@@ -25,10 +54,31 @@
 
     private IEnumerable<Book> books => context.Books.AsNoTracking();
 
+    private string genreFilter = string.Empty;
+
+    private IEnumerable<Book> filtered => books
+        .Where(b => string.IsNullOrWhiteSpace(genreFilter) || b.Genre == genreFilter);
+
+    private IEnumerable<string> genres => books.Select(b => b.Genre).Distinct();
+
     protected override void OnInitialized()
     {
         context = DbFactory.CreateDbContext();
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+
+
+
+    private string sortFilter = string.Empty;
+
+    private IEnumerable<decimal> prices => books.Select(b => b.Price);
+
+    private IEnumerable<Book> sorted => sortFilter switch
+    {
+        "asc" => filtered.OrderBy(b => b.Price),
+        "desc" => filtered.OrderByDescending(b => b.Price),
+        _ => filtered
+    };
 }

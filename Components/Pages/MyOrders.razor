@@ -1,0 +1,58 @@
+@page "/myorders"
+@using Microsoft.EntityFrameworkCore
+@inject OrderState OrderState
+@inject IDbContextFactory<BookstoreDb> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Bookstore - My Orders</PageTitle>
+
+<div class="">
+    @* <p>@placedOrders.Count</p> *@
+    @* @foreach( var orders in placedOrders) {
+        <p>@orders.OrderItems</p>
+    } *@
+    @if(placedOrders is null) {
+        <p>No orders yet.</p>
+    } else {
+        @foreach(var order in placedOrders) {
+            <div class="col-sm border pt-3 ps-3 pe-3">
+                <div class="">
+                    <h2>@order.OrderDate.ToString("MMMM dd, yyyy")</h2>
+                </div>
+
+                @foreach(var item in order.OrderItems){
+                    <div class="col-sm-8 position-relative">
+                        <dl class="row mb-0">
+                            <dt class="col-sm">@item.Book.Title (@item.Quantity):</dt>
+                            <dd class="col-sm-2">$@item.GetTotal()</dd>
+                        </dl>
+                    </div>
+                }
+
+                <p class="mt-3">Total (@order.OrderItems.Count): $@order.GetTotal()</p>
+            </div>
+        }
+    }
+</div>
+
+
+@code {
+    private BookstoreDb context { get; set; }
+
+    private List<Order> placedOrders { get; set; } = new();
+
+    @* private Order Order => OrderState.Order; *@
+
+    protected async override Task OnInitializedAsync()
+    {
+        await using var context = await DbFactory.CreateDbContextAsync();
+
+        placedOrders = await context.Orders
+            .AsNoTracking()
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.Book)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+    }
+
+}
